@@ -32,7 +32,7 @@
 
 ## 使用方法
 
-1. 获取项目源码并使用兼容的 C++ 编译器自行编译，或者下载已编译好的可执行文件。
+1. 获取项目源码并使用兼容的 C++ 编译器自行编译，或者下载已编译好的可执行文件。[(发布页)](https://github.com/ystemsrx/Code-Atlas/releases)
 
 ```
 g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o my_program.exe
