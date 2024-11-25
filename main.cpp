@@ -22,11 +22,11 @@ std::vector<CodeBlock> pendingCodeBlocks;
 std::atomic<bool> isExecuting(false);
 std::mutex codeBlocksMutex;
 
-// 新增变量用于计时
+// 计时
 std::chrono::steady_clock::time_point lastChunkTime;
 std::mutex lastChunkMutex;
 
-// 修改 ReadOutputThread 函数
+// ReadOutputThread
 void ReadOutputThread(HANDLE hPipe) {
     char buffer[4096];
     DWORD bytesRead;
@@ -44,9 +44,9 @@ void ReadOutputThread(HANDLE hPipe) {
     std::string firstLineBuffer;
     bool collectingFirstLine = false;
 
-    std::string codeBuffer; // 用于收集代码内容
+    std::string codeBuffer; // 收集代码内容
 
-    // 当前代码块的颜色
+    // 当前代码块颜色
     WORD currentCodeColor = CODE_COLOR;
 
     // Variables for markdown formatting
@@ -56,12 +56,12 @@ void ReadOutputThread(HANDLE hPipe) {
     bool inHeading = false;
     int headingLevel = 0;
 
-    // 新增变量，用于处理单反引号包裹的内容
+    // 处理单反引号包裹的内容
     bool inInlineCode = false;
     // 定义颜色，确保不与已有颜色冲突
     const WORD INLINE_CODE_COLOR = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; // 青色
 
-    // 新增变量，用于缓冲标题行
+    // 缓冲标题行
     std::string headingBuffer;
     bool isBufferingHeading = false;
     int currentHeadingLevel = 0;
@@ -223,10 +223,8 @@ void ReadOutputThread(HANDLE hPipe) {
                             // Single backtick detected, enter or exit inline code
                             inInlineCode = !inInlineCode;
                             if (inInlineCode) {
-                                // 可根据需要添加处理逻辑
                             }
                             else {
-                                // 可根据需要添加处理逻辑
                             }
                         }
                         else {
@@ -245,13 +243,13 @@ void ReadOutputThread(HANDLE hPipe) {
                             pos++;
                         }
                         else {
-                            // 打印内联代码内容
+                            // 内联代码内容
                             printWithColor(std::string(1, accumulator[pos]), INLINE_CODE_COLOR);
                             pos++;
                         }
                     }
                     else {
-                        // 处理粗体和斜体
+                        // 粗体和斜体
                         if (accumulator[pos] == '*' || accumulator[pos] == '_') {
                             char marker = accumulator[pos];
                             size_t markerCount = 0;
@@ -359,7 +357,7 @@ void ReadOutputThread(HANDLE hPipe) {
     SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
 }
 
-// 新增 TimerThread 函数
+// TimerThread
 void TimerThread() {
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 每100ms检查一次
@@ -475,7 +473,7 @@ int main() {
     std::thread timerThread(TimerThread);
     timerThread.detach();
 
-    // 等待模型加载完成,增加超时检测
+    // 等待模型加载完成,包含超时检测
     std::cout << "正在加载模型，请稍候...\n";
     int timeout = 0;
     while (!modelLoaded && timeout < 300) { // 30秒超时
