@@ -2,7 +2,7 @@
 #include "utils.h"
 #include <algorithm>
 
-// 具体执行器的实现
+// 执行器
 bool PythonExecutor::Execute(const CodeBlock& block, std::string& resultMessage) {
     return ExecuteCodeWithInterpreter(block, resultMessage, ".py", "python", "");
 }
@@ -19,7 +19,7 @@ bool ShellExecutor::Execute(const CodeBlock& block, std::string& resultMessage) 
     return ExecuteCodeWithInterpreter(block, resultMessage, ".sh", "bash", "");
 }
 
-// ExecutorFactory 的实现
+// ExecutorFactory
 CodeExecutor* ExecutorFactory::CreateExecutor(const std::string& language) {
     std::string lang = language;
     std::transform(lang.begin(), lang.end(), lang.begin(), ::tolower);
@@ -40,7 +40,7 @@ CodeExecutor* ExecutorFactory::CreateExecutor(const std::string& language) {
     }
 }
 
-// 修改后的 ExecuteCode 函数，使用多态
+// ExecuteCode
 bool ExecuteCode(const CodeBlock& block, std::string& resultMessage) {
     std::unique_ptr<CodeExecutor> executor(ExecutorFactory::CreateExecutor(block.language));
     if (executor) {
