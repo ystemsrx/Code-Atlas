@@ -73,6 +73,7 @@ g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o code-atlas.e
 - [ ] Support other AI model APIs, such as OpenAI, for enhanced flexibility.
 - [ ] Implement enhanced sandboxing mechanisms for improved security.
 - [ ] Extend Markdown rendering capabilities for additional elements.
+- [ ] Support voice mode, free your hands.
 
 ---
 
