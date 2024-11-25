@@ -33,6 +33,11 @@
 ## 使用方法
 
 1. 获取项目源码并使用兼容的 C++ 编译器自行编译，或者下载已编译好的可执行文件。
+
+```
+g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o my_program.exe
+```
+
 2. 前往 [llama.cpp 发布页面](https://github.com/ggerganov/llama.cpp/releases)，下载或自行编译适合版本的 `llama.cpp`，确保您拥有以下文件：
    - `llama.cli.exe`
    - 所需的 `.dll` 文件
