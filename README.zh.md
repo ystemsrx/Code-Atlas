@@ -73,6 +73,7 @@ g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o code-atlas.e
 - [ ] 支持其他 AI 模型 API，例如 OpenAI，为用户提供更多选择。
 - [ ] 提供更强的沙箱机制，提升代码执行的安全性。
 - [ ] 扩展 Markdown 渲染功能，支持更多元素。
+- [ ] 支持语音模式，解放双手
 
 ---
 
