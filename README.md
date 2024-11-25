@@ -32,7 +32,7 @@ This project is a lightweight C++-based interpreter inspired by [Open Interprete
 
 ## Usage
 
-1. Obtain the source code and compile it using a compatible C++ compiler, or download a precompiled binary if available.
+1. Obtain the source code and compile it using a compatible C++ compiler, or download a precompiled binary if available. [(Release Page)](https://github.com/ystemsrx/Code-Atlas/releases)
 
 ```
 g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o my_program.exe
