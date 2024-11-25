@@ -35,7 +35,7 @@ This project is a lightweight C++-based interpreter inspired by [Open Interprete
 1. Obtain the source code and compile it using a compatible C++ compiler, or download a precompiled binary if available. [(Release Page)](https://github.com/ystemsrx/Code-Atlas/releases)
 
 ```
-g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o my_program.exe
+g++ -std=c++17 main.cpp constants.cpp codeexecutor.cpp utils.cpp -o code-atlas.exe
 ```
 
 2. Obtain `llama.cpp` from its [releases page](https://github.com/ggerganov/llama.cpp/releases). Ensure you have:
