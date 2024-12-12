@@ -53,6 +53,21 @@ g++ -std=c++17 \
     -lws2_32 \
     -o code-atlas.exe
 ```
+or
+
+```
+g++ -std=c++17 `
+    main.cpp `
+    global.cpp `
+    markdown_processor.cpp `
+    code_executor.cpp `
+    model_caller.cpp `
+    timer_thread.cpp `
+    -lcurl `
+    -lws2_32 `
+    -o code-atlas.exe
+```
+
 
 2. Download or compile [llama.cpp](https://github.com/ggerganov/llama.cpp/releases), ensuring the following files are available:
    - `llama.cli.exe`
