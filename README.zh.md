@@ -54,6 +54,20 @@ g++ -std=c++17 \
     -o code-atlas.exe
 ```
 
+或者
+
+```
+g++ -std=c++17 `
+    main.cpp `
+    global.cpp `
+    markdown_processor.cpp `
+    code_executor.cpp `
+    model_caller.cpp `
+    timer_thread.cpp `
+    -lcurl `
+    -lws2_32 `
+    -o code-atlas.exe
+```
 2. 下载或编译 [llama.cpp](https://github.com/ggerganov/llama.cpp/releases)，确保以下文件齐备：
    - `llama.cli.exe`
    - 必需的 `.dll` 文件
