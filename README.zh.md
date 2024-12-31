@@ -40,34 +40,9 @@
 1. 下载项目源码并使用兼容的 C++ 编译器进行编译，或者下载已编译的可执行文件（[发布页](https://github.com/ystemsrx/Code-Atlas/releases)）。
 
 ```
-g++ -std=c++17 \
-    -I/mingw64/include \
-    main.cpp \
-    global.cpp \
-    markdown_processor.cpp \
-    code_executor.cpp \
-    model_caller.cpp \
-    timer_thread.cpp \
-    -L/mingw64/lib \
-    -lcurl \
-    -lws2_32 \
-    -o code-atlas.exe
+g++ code-atlas.cpp -o code-atlas.exe -std=c++17 -lcurl -lws2_32
 ```
 
-或者
-
-```
-g++ -std=c++17 `
-    main.cpp `
-    global.cpp `
-    markdown_processor.cpp `
-    code_executor.cpp `
-    model_caller.cpp `
-    timer_thread.cpp `
-    -lcurl `
-    -lws2_32 `
-    -o code-atlas.exe
-```
 2. 下载或编译 [llama.cpp](https://github.com/ggerganov/llama.cpp/releases)，确保以下文件齐备：
    - `llama.cli.exe`
    - 必需的 `.dll` 文件
