@@ -40,34 +40,8 @@ This project is a lightweight interpreter developed in C++, inspired by [Open In
 1. Download the project source code and compile it using a compatible C++ compiler, or download the precompiled executable ([Releases](https://github.com/ystemsrx/Code-Atlas/releases)).
 
 ```
-g++ -std=c++17 \
-    -I/mingw64/include \
-    main.cpp \
-    global.cpp \
-    markdown_processor.cpp \
-    code_executor.cpp \
-    model_caller.cpp \
-    timer_thread.cpp \
-    -L/mingw64/lib \
-    -lcurl \
-    -lws2_32 \
-    -o code-atlas.exe
+g++ code-atlas.cpp -o code-atlas.exe -std=c++17 -lcurl -lws2_32
 ```
-or
-
-```
-g++ -std=c++17 `
-    main.cpp `
-    global.cpp `
-    markdown_processor.cpp `
-    code_executor.cpp `
-    model_caller.cpp `
-    timer_thread.cpp `
-    -lcurl `
-    -lws2_32 `
-    -o code-atlas.exe
-```
-
 
 2. Download or compile [llama.cpp](https://github.com/ggerganov/llama.cpp/releases), ensuring the following files are available:
    - `llama.cli.exe`
