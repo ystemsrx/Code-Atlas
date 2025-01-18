@@ -80,10 +80,6 @@ std::mutex lastChunkMutex;
 
 /**
  * @brief Retrieve the last non-empty line from a given string.
- * 
- * This function scans the input string line by line. It will return the 
- * last line that is not empty. This is useful for displaying the final 
- * meaningful line of output or error messages.
  */
 std::string GetLastNonEmptyLine(const std::string& str) {
     std::istringstream stream(str);
@@ -98,9 +94,6 @@ std::string GetLastNonEmptyLine(const std::string& str) {
 
 /**
  * @brief Convert a UTF-8 encoded std::string into a wide-character std::wstring.
- * 
- * This is used for writing text to files in UTF-16 (for PowerShell or batch scripts) 
- * or for Windows API calls that require wide strings.
  */
 std::wstring Utf8ToWstring(const std::string& str) {
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.length(), NULL, 0);
@@ -111,10 +104,6 @@ std::wstring Utf8ToWstring(const std::string& str) {
 
 /**
  * @brief Read the output from a given pipe handle (e.g., child's stdout).
- * 
- * This function reads the data from the pipe in an ANSI code page, converts it 
- * to wide string, and then re-encodes it as UTF-8. This ensures that we are 
- * eventually dealing with UTF-8 strings in our program.
  */
 std::string ReadPipeOutput(HANDLE hPipe) {
     const int bufferSize = 4096;
@@ -137,13 +126,6 @@ std::string ReadPipeOutput(HANDLE hPipe) {
 
 /**
  * @brief Execute a code block with a specified interpreter and arguments, capturing the output.
- * 
- * @param block The code block to be executed (contains code text and language).
- * @param resultMessage A string to hold execution results or errors.
- * @param fileExt The file extension used for the temporary script file (e.g. ".py", ".bat").
- * @param interpreter The interpreter executable (e.g. "python", "cmd.exe").
- * @param interpreterArgs Additional command-line arguments (e.g. "/C", "-ExecutionPolicy Bypass -File").
- * @return true if the code execution is successful, false otherwise.
  */
 bool ExecuteCodeWithInterpreter(const CodeBlock& block, 
                                 std::string& resultMessage, 
@@ -162,7 +144,7 @@ bool ExecuteCodeWithInterpreter(const CodeBlock& block,
     bool isPowerShell = (interpreter == "powershell");
     bool isBatch      = (interpreter == "cmd.exe");
 
-    // If it's PowerShell or Batch, we write the file in UTF-16 LE. Otherwise, write in normal text form.
+    // 写文件时，如果是 PowerShell 或批处理脚本，则用 UTF-16 LE
     if (isPowerShell) {
         std::wstring wTempCodeFile = Utf8ToWstring(tempCodeFile);
         std::ofstream outFile(wTempCodeFile.c_str(), std::ios::binary);
@@ -170,10 +152,8 @@ bool ExecuteCodeWithInterpreter(const CodeBlock& block,
             resultMessage = "Failed to create temporary code file.";
             return false;
         }
-        // Write UTF-16 LE BOM
         unsigned char bom[] = { 0xFF, 0xFE };
         outFile.write(reinterpret_cast<char*>(bom), sizeof(bom));
-        // Convert code to wide string and write
         std::wstring wcode = Utf8ToWstring(block.code);
         outFile.write(reinterpret_cast<const char*>(wcode.data()), wcode.size() * sizeof(wchar_t));
         outFile.close();
@@ -208,7 +188,7 @@ bool ExecuteCodeWithInterpreter(const CodeBlock& block,
         return false;
     }
 
-    // Build command line: interpreter + args + script file
+    // Build command line
     std::string cmdLine;
     if (!interpreter.empty()) {
         cmdLine = interpreter + " ";
@@ -217,7 +197,6 @@ bool ExecuteCodeWithInterpreter(const CodeBlock& block,
         }
         cmdLine += "\"" + tempCodeFile + "\"";
     } else {
-        // If no interpreter is specified, we just run the file
         cmdLine = "\"" + tempCodeFile + "\"";
     }
 
@@ -247,7 +226,6 @@ bool ExecuteCodeWithInterpreter(const CodeBlock& block,
         CloseHandle(hStdOutWrite);
         CloseHandle(hStdErrWrite);
 
-        // Wait until the process finishes
         WaitForSingleObject(pi.hProcess, INFINITE);
         DWORD exitCode;
         if (GetExitCodeProcess(pi.hProcess, &exitCode)) {
@@ -306,7 +284,6 @@ public:
     virtual bool Execute(const CodeBlock& block, std::string& resultMessage) = 0;
 };
 
-// Specialized executor classes for different interpreters
 class PythonExecutor : public CodeExecutor {
 public:
     bool Execute(const CodeBlock& block, std::string& resultMessage) override;
@@ -327,9 +304,6 @@ public:
     bool Execute(const CodeBlock& block, std::string& resultMessage) override;
 };
 
-/**
- * @brief A factory class that creates appropriate CodeExecutor objects based on the language string.
- */
 class ExecutorFactory {
 public:
     static CodeExecutor* CreateExecutor(const std::string& language);
@@ -348,16 +322,11 @@ bool PowerShellExecutor::Execute(const CodeBlock& block, std::string& resultMess
 }
 
 bool ShellExecutor::Execute(const CodeBlock& block, std::string& resultMessage) {
-    // Note: In the original logic, "shell"/"bash"/"sh" also uses PowerShellExecutor.
-    // We keep this behavior unchanged for compatibility.
+    // 与原逻辑保持一致：对于 "shell"/"bash"/"sh" 也用 PowerShellExecutor 的方式，
+    // 这里做一个简单的 bash 执行示例
     return ExecuteCodeWithInterpreter(block, resultMessage, ".sh", "bash", "");
 }
 
-/**
- * @brief Factory method that decides which executor to use based on the language string.
- * 
- * If the language is not recognized, it returns a nullptr to indicate unsupported language.
- */
 CodeExecutor* ExecutorFactory::CreateExecutor(const std::string& language) {
     std::string lang = language;
     std::transform(lang.begin(), lang.end(), lang.begin(), ::tolower);
@@ -368,9 +337,7 @@ CodeExecutor* ExecutorFactory::CreateExecutor(const std::string& language) {
     } else if (lang == "powershell" || lang == "ps1") {
         return new PowerShellExecutor();
     } else if (lang == "shell" || lang == "bash" || lang == "sh") {
-        // The original code returns PowerShellExecutor here, 
-        // but per its definition we actually call ShellExecutor's logic with "bash".
-        // We'll keep the logic as is to avoid changing behavior.
+        // 保持原有兼容
         return new PowerShellExecutor();
     } else {
         return nullptr;
@@ -378,9 +345,7 @@ CodeExecutor* ExecutorFactory::CreateExecutor(const std::string& language) {
 }
 
 /**
- * @brief Execute a code block by creating the appropriate executor. 
- * 
- * If the language is unsupported, a suitable error message is returned.
+ * @brief Execute a code block by creating the appropriate executor.
  */
 bool ExecuteCode(const CodeBlock& block, std::string& resultMessage) {
     std::unique_ptr<CodeExecutor> executor(ExecutorFactory::CreateExecutor(block.language));
@@ -415,8 +380,7 @@ public:
 };
 
 /**
- * @brief Handles parsing and rendering of Markdown-style fenced code blocks (```) 
- *        and collects them into CodeBlock structs for later execution.
+ * @brief Handles parsing and rendering of Markdown-style fenced code blocks (```).
  */
 class CodeBlockElement : public MarkdownElement {
 private:
@@ -431,10 +395,6 @@ private:
     WORD currentCodeColor = CODE_COLOR;
 
 public:
-    /**
-     * @brief Processes each character to determine whether we are inside a code block.
-     *        It checks for triple backticks (```), collects code, and identifies language.
-     */
     bool process(char ch, size_t& pos, const std::string& accumulator, 
                  HANDLE hConsole, WORD& currentColor) override 
     {
@@ -455,7 +415,7 @@ public:
                 }
                 return true;
             } else {
-                // If the buffer contains backticks but not enough for a code block, we print them out
+                // 如果之前累积了一些 ` 但不足3个，就把它们打印出来
                 if (!startBackTickBuffer.empty()) {
                     for (char c : startBackTickBuffer) {
                         SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
@@ -470,14 +430,13 @@ public:
         else {
             // We are inside a code block
             if (collectingFirstLine) {
-                // The first line after ``` is often used to specify language
+                // 第一行通常是语言声明
                 if (ch == '\n') {
                     collectingFirstLine = false;
                     std::string lowerFirstLine = firstLineBuffer;
                     std::transform(lowerFirstLine.begin(), lowerFirstLine.end(), 
                                    lowerFirstLine.begin(), ::tolower);
 
-                    // Default to a color if no matching language is found
                     currentCodeColor = YELLOW_COLOR;
                     for (const auto& pair : languageColorMap) {
                         if (lowerFirstLine.find(pair.first) != std::string::npos) {
@@ -504,7 +463,7 @@ public:
                     endBackTickCount = 0;
                     SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
 
-                    // Once code block ends, store it in pendingCodeBlocks
+                    // 存储 CodeBlock
                     CodeBlock block;
                     block.code = codeBuffer;
                     block.language = "";
@@ -528,7 +487,6 @@ public:
                 return true;
             } 
             else {
-                // Append the character to the code buffer and print in code color
                 codeBuffer += ch;
                 SetConsoleTextAttribute(hConsole, currentCodeColor);
                 std::cout << ch;
@@ -538,9 +496,6 @@ public:
         }
     }
 
-    /**
-     * @brief Reset internal states to default.
-     */
     void reset() override {
         inCodeBlock = false;
         codeBuffer.clear();
@@ -552,15 +507,12 @@ public:
         firstLineBuffer.clear();
     }
 
-    /**
-     * @brief Check if currently inside a code block.
-     */
     bool isActive() const override {
         return inCodeBlock;
     }
 };
 
-// Holds non-code-block markdown states, such as heading, bold, italic
+// Holds non-code-block markdown states
 struct MarkdownState {
     bool headingDetected = false;
     int headingLevel = 0;
@@ -587,7 +539,7 @@ inline void SetColor(HANDLE hConsole, WORD color) {
 }
 
 /**
- * @brief This class handles character processing for standard Markdown lines (headers, bold, italic).
+ * @brief This class handles character processing for standard Markdown lines.
  */
 class MarkdownLineProcessor : public LineProcessor {
 public:
@@ -595,9 +547,6 @@ public:
         resetLineState();
     }
 
-    /**
-     * @brief Reset the line state (e.g., heading detection, bold/italic flags).
-     */
     void resetLineState() override {
         state.headingDetected = false;
         state.headingLevel    = 0;
@@ -611,9 +560,6 @@ public:
         lastMarkerUsed        = true;
     }
 
-    /**
-     * @brief Process a single character for Markdown syntax (headings, bold, italic).
-     */
     void processChar(char ch) override {
         if (ch == '\n') {
             // Reset format at line end
@@ -628,7 +574,6 @@ public:
             return;
         }
 
-        // If at line start, check for heading syntax (#)
         if (lineStart) {
             if (hashCount == 0 && ch == '#') {
                 collectingHash = true;
@@ -643,7 +588,6 @@ public:
                     }
                     return;
                 } else {
-                    // If we see a space after #..., that indicates a heading
                     if (ch == ' ') {
                         state.headingDetected = true;
                         if (hashCount > 4) {
@@ -657,7 +601,7 @@ public:
                         hashCount = 0;
                         return;
                     } else {
-                        // If it's not a space, print out the # we collected
+                        // Not a space, print out the # we collected
                         SetColor(hConsole, DEFAULT_COLOR);
                         for (int i = 0; i < hashCount; i++) {
                             std::cout << '#';
@@ -679,7 +623,6 @@ public:
             return;
         }
 
-        // Normal character output
         std::cout << ch;
     }
 
@@ -692,20 +635,14 @@ private:
     char lastMarkerChar = '\0';
     bool lastMarkerUsed = true;
 
-    /**
-     * @brief Toggle bold/italic states according to the marker.
-     * 
-     * If we see the same marker twice in a row (like "**"), we interpret it 
-     * as toggling bold. Otherwise, we interpret a single marker as toggling italic.
-     */
     void handleFormattingMarker(char marker) {
         if (!lastMarkerUsed && lastMarkerChar == marker) {
-            // The same marker repeated -> toggle bold
+            // **: toggle bold
             state.inBold = !state.inBold;
             lastMarkerUsed = true;
             lastMarkerChar = '\0';
         } else {
-            // Single marker -> toggle italic
+            // *: toggle italic
             state.inItalic = !state.inItalic;
             lastMarkerChar = marker;
             lastMarkerUsed = false;
@@ -714,12 +651,10 @@ private:
     }
 };
 
-// Global pointer for line processor so other parts can reference it if needed
 MarkdownLineProcessor* gLineProcessor = nullptr;
 
 /**
- * @brief Abstract class for model calling. This defines the interface to initialize, 
- *        start input loops, process responses, and execute code blocks.
+ * @brief Abstract class for model calling.
  */
 class ModelCaller {
 public:
@@ -736,14 +671,14 @@ public:
 void TimerThread();
 
 /**
- * @brief Local model caller, which starts a local process (e.g. llama-cli) and streams data.
+ * @brief Local model caller, which starts a local process (e.g. llama-cli).
  */
 class LocalModelCaller : public ModelCaller {
 private:
     PROCESS_INFORMATION pi;
     HANDLE hChildStdOutRead = nullptr;
     SECURITY_ATTRIBUTES saAttr;
-    std::string systemEndMarker; // Used to detect end of system prompt
+    std::string systemEndMarker; 
 
 public:
     LocalModelCaller() {
@@ -762,9 +697,6 @@ public:
         CloseHandle(hChildStdOutRead);
     }
 
-    /**
-     * @brief Initialize the local model by starting the child process with the correct parameters.
-     */
     bool initialize(const json& configJson) override {
         std::string systemPrompt = configJson["system"]["prompt"];
         systemEndMarker = systemPrompt.length() >= 20 
@@ -773,14 +705,13 @@ public:
         std::string modelName = configJson["model"]["name"];
         json parameters = configJson["model"]["parameters"];
 
-        // Collect command-line parameters
         std::string TOP_P         = std::to_string(parameters["top_p"].get<double>());
         std::string TOP_K         = std::to_string(parameters["top_k"].get<int>());
         std::string MAX_LENGTH    = std::to_string(parameters["max_length"].get<int>());
         std::string TEMPERATURE   = std::to_string(parameters["temperature"].get<double>());
         std::string CONTEXT_WINDOW= std::to_string(parameters["context_window"].get<int>());
 
-        // Build command line for the local model
+        // llama-cli command line
         std::string cmdline = "llama-cli -m " + modelName + " -p \"" + systemPrompt + "\"";
         cmdline += " -n " + MAX_LENGTH;
         cmdline += " -c " + CONTEXT_WINDOW;
@@ -789,7 +720,6 @@ public:
         cmdline += " --top-p " + TOP_P;
         cmdline += " -cnv";
 
-        // Convert to char array
         std::vector<char> cmdlineVec(cmdline.begin(), cmdline.end());
         cmdlineVec.push_back('\0');
         char* cmdlineCStr = cmdlineVec.data();
@@ -807,7 +737,6 @@ public:
         si.hStdInput  = hChildStdInReadLocal;
         si.dwFlags   |= STARTF_USESTDHANDLES;
 
-        // Create the process
         if (!CreateProcessA(
                 NULL, 
                 cmdlineCStr, 
@@ -825,17 +754,15 @@ public:
             return false;
         }
 
-        // Close pipes we don't need
         CloseHandle(hChildStdOutWrite);
         CloseHandle(hChildStdInReadLocal);
 
-        // Initialize the time for the last chunk
         {
             std::lock_guard<std::mutex> lock(lastChunkMutex);
             lastChunkTime = std::chrono::steady_clock::now();
         }
 
-        // Start a thread to read the child's output
+        // 读取子进程输出的线程
         std::thread outputThread([this]() {
             HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
             SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
@@ -879,7 +806,7 @@ public:
                     continue;
                 }
 
-                // Otherwise, parse the chunk for Markdown
+                // Otherwise, parse the chunk as markdown
                 size_t pos = 0;
                 while (pos < chunk.size()) {
                     char ch = chunk[pos];
@@ -888,7 +815,7 @@ public:
                     } else {
                         size_t oldPos = pos;
                         if (codeBlockElement.process(ch, pos, chunk, hConsole, currentColor)) {
-                            continue;
+                            // 如果进入/退出 codeBlock，这里就处理完了
                         } else {
                             lineProcessor.processChar(ch);
                             pos++;
@@ -902,13 +829,13 @@ public:
         });
         outputThread.detach();
 
-        // Start the timer thread for periodic code block execution
+        // 启动 TimerThread
         std::thread timerThreadObj(TimerThread);
         timerThreadObj.detach();
 
         std::cout << "Loading model, please wait...\n";
 
-        // Wait for model to load or time out
+        // 等待模型加载
         int timeout = 0;
         while (!modelLoaded && timeout < 300) {
             Sleep(100);
@@ -928,9 +855,6 @@ public:
         return true;
     }
 
-    /**
-     * @brief Start the input loop to pass user input to the child process.
-     */
     void startInputOutputLoop() override {
         std::string input;
         DWORD bytesWritten;
@@ -943,7 +867,7 @@ public:
             HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
             DWORD mode;
             GetConsoleMode(hStdin, &mode);
-            // Turn off line input so we can manually handle backspaces etc.
+            // 关闭行输入模式，手动处理回退
             SetConsoleMode(hStdin, mode & ~ENABLE_LINE_INPUT);
 
             GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
@@ -959,7 +883,6 @@ public:
                     } else if (ch == '\b') {
                         GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
                         if (!input.empty() && csbi.dwCursorPosition.X > cursorStartX) {
-                            // Handle backspace for possible multi-byte chars
                             if ((unsigned char)input.back() >= 0x80) {
                                 if (csbi.dwCursorPosition.X >= cursorStartX + 2) {
                                     input.pop_back();
@@ -980,14 +903,13 @@ public:
                 }
             }
 
-            // Restore console mode
+            // 恢复控制台模式
             SetConsoleMode(hStdin, mode);
 
             if (input == "quit") {
                 break;
             }
 
-            // Send input to the model
             input += "\n";
             if (!WriteFile(hChildStdInWrite, input.c_str(), (DWORD)input.length(), &bytesWritten, NULL)) {
                 std::cout << "Write failure" << std::endl;
@@ -997,22 +919,15 @@ public:
         }
     }
 
-    /**
-     * @brief Process response from the model. 
-     *        (Not used in local mode since we directly read from the child process.)
-     */
-    void processResponse(const std::string& response) override {}
+    void processResponse(const std::string& /*response*/) override {
+        // 本地模式直接从子进程 stdout 获取，不需要此函数
+    }
 
-    /**
-     * @brief Execute pending code blocks. 
-     *        (In local mode, we rely on TimerThread to handle the actual logic.)
-     */
-    void executePendingCodeBlocks() override {}
+    void executePendingCodeBlocks() override {
+        // 本地模式依靠 TimerThread 来执行
+    }
 };
 
-/**
- * @brief Size callback for the streaming data from the remote API (used by CURL).
- */
 size_t StreamCallback(char* ptr, size_t size, size_t nmemb, void* userdata);
 
 /**
@@ -1021,7 +936,7 @@ size_t StreamCallback(char* ptr, size_t size, size_t nmemb, void* userdata);
 class APIModelCaller : public ModelCaller {
 public:
     std::vector<json> messages;
-    APIModelCaller() : isNewResponse(true) {}
+    APIModelCaller() : isNewResponse(true), isLocalHostApi(false) {}
     ~APIModelCaller() {}
 
     bool initialize(const json& configJson) override;
@@ -1029,6 +944,7 @@ public:
     void processResponse(const std::string& response) override;
     void executePendingCodeBlocks() override;
     void doOneRequest();
+
 private:
     std::string api_base;
     std::string api_key;
@@ -1037,12 +953,14 @@ private:
     json parameters;
     bool isNewResponse;
 
+    // 用于区分是否是 localhost 模式
+    bool isLocalHostApi;
+    // 用于累积 localhost 响应的内容
+    std::string localHostAccumulatedResponse;
+
     CodeBlockElement codeBlockElement;
 };
 
-/**
- * @brief Sends a request to the remote API in streaming mode, receiving partial responses via the callback.
- */
 void APIModelCaller::doOneRequest() {
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -1053,19 +971,33 @@ void APIModelCaller::doOneRequest() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
     struct curl_slist* headers = NULL;
-    std::string auth_header = "Authorization: Bearer " + api_key;
-    headers = curl_slist_append(headers, auth_header.c_str());
+    // 如果不是 localhost，就带上 Authorization 头
+    if (!isLocalHostApi && !api_key.empty()) {
+        std::string auth_header = "Authorization: Bearer " + api_key;
+        headers = curl_slist_append(headers, auth_header.c_str());
+    }
     headers = curl_slist_append(headers, "Content-Type: application/json");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    json request_body = {
-        {"model", model_name},
-        {"messages", messages},
-        {"stream", true}
-    };
+    // 根据需求，将参数放到 "options" 下，并忽略 key
+    json request_body;
+    request_body["model"] = model_name;
 
-    for (auto& el : parameters.items()) {
-        request_body[el.key()] = el.value();
+    // 将 context_window/max_length 重命名为 num_ctx/num_predict
+    json opts;
+    opts["temperature"] = parameters["temperature"];
+    opts["top_p"]       = parameters["top_p"];
+    opts["top_k"]       = parameters["top_k"];
+    opts["num_ctx"]     = parameters["context_window"];
+    opts["num_predict"] = parameters["max_length"];
+
+    request_body["options"]  = opts;
+    request_body["messages"] = messages;
+
+    // 如果不是 localhost，但依旧想使用类似 OpenAI 的流式，可加 "stream": true
+    // 反之 localhost 走自己的流式实现（本例子中不加 "stream"）
+    if (!isLocalHostApi) {
+        request_body["stream"] = true; 
     }
 
     std::string postData = request_body.dump();
@@ -1084,7 +1016,7 @@ void APIModelCaller::doOneRequest() {
 }
 
 /**
- * @brief The timer thread that periodically checks if code blocks need execution and handles it.
+ * @brief The timer thread that periodically checks if code blocks need execution.
  */
 void TimerThread() {
     while (true) {
@@ -1097,7 +1029,7 @@ void TimerThread() {
         auto now = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count();
 
-        // If more than 1 second has passed since last chunk, we consider executing pending code blocks
+        // 如果超过1秒没有新输出，就执行代码块
         if (duration >= 1000) {
             if (modelLoaded && !isExecuting) {
                 std::vector<CodeBlock> blocksToExecute;
@@ -1115,7 +1047,7 @@ void TimerThread() {
                     caller = modelCaller.get();
                 }
 
-                // Run execution in a separate thread
+                // 异步执行代码
                 std::thread execThread([blocksToExecute, caller]() {
                     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
                     std::string fullOutput;
@@ -1133,8 +1065,6 @@ void TimerThread() {
                             SetConsoleTextAttribute(hConsole, RED_COLOR);
                         }
 
-                        // std::string lastLine = GetLastNonEmptyLine(resultMessage);
-                        // std::cout << lastLine << std::endl;
                         std::cout << resultMessage << std::endl;
                         SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
 
@@ -1142,17 +1072,11 @@ void TimerThread() {
                         lastSuccess       = success;
                     }
 
-                    // After finishing all blocks, send the result back to the model
                     if (!lastResultMessage.empty()) {
-                        std::string messageToModel;
-                        if (lastSuccess) {
-                            messageToModel = fullOutput;
-                        } else {
-                            messageToModel = lastResultMessage;
-                        }
+                        std::string messageToModel = lastSuccess ? fullOutput : lastResultMessage;
 
                         if (caller) {
-                            // If we are in API mode, we add a new user message and request
+                            // API 模式下，把结果当做 user 消息再发给模型
                             APIModelCaller* apiCaller = static_cast<APIModelCaller*>(caller);
                             apiCaller->messages.push_back({
                                 {"role", "user"},
@@ -1161,7 +1085,7 @@ void TimerThread() {
                             apiCaller->doOneRequest();
                             std::cout << "> " << std::flush;
                         } else {
-                            // If we are in local mode, we simply write the result to the child process
+                            // 本地模式，直接写入子进程 stdin
                             DWORD bytesWritten;
                             WriteFile(hChildStdInWrite, messageToModel.c_str(), 
                                       (DWORD)messageToModel.length(), &bytesWritten, NULL);
@@ -1178,8 +1102,7 @@ void TimerThread() {
 }
 
 /**
- * @brief The CURL stream callback for handling the partial responses from the remote API.
- *        This function is invoked repeatedly as data arrives.
+ * @brief The CURL stream callback for partial responses.
  */
 size_t StreamCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
     APIModelCaller* caller = reinterpret_cast<APIModelCaller*>(userdata);
@@ -1189,18 +1112,21 @@ size_t StreamCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
     return totalSize;
 }
 
-/**
- * @brief Initialize the API caller by reading configuration such as base_url, API key, and model parameters.
- */
 bool APIModelCaller::initialize(const json& configJson) {
     try {
-        api_base     = configJson["api"]["base_url"];
-        api_key      = configJson["api"]["key"];
-        model_name   = configJson["model"]["name"];
-        system_role  = configJson["system"]["prompt"];
-        parameters   = configJson["model"]["parameters"];
+        api_base    = configJson["api"]["base_url"];
+        api_key     = configJson["api"]["key"];
+        model_name  = configJson["model"]["name"];
+        system_role = configJson["system"]["prompt"];
+        parameters  = configJson["model"]["parameters"];
 
-        // The first message is usually a "system" role message
+        // 如果检测到 base_url 中包含 "localhost"，则忽略 key 并进入本地 API 模式
+        if (api_base.find("localhost") != std::string::npos) {
+            isLocalHostApi = true;
+            api_key.clear();
+        }
+
+        // 第一次对话通常是 system role
         messages.push_back({
             {"role", "system"},
             {"content", system_role}
@@ -1221,20 +1147,9 @@ bool APIModelCaller::initialize(const json& configJson) {
     return true;
 }
 
-/**
- * @brief Set the console to UTF-8 encoding for input and output.
- */
-void setUTF8Console() {
+void APIModelCaller::startInputOutputLoop() {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-}
-
-/**
- * @brief Start an input loop for the remote API scenario. 
- *        This reads user input from console and sends it as messages to the API.
- */
-void APIModelCaller::startInputOutputLoop() {
-    setUTF8Console();
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
     MarkdownLineProcessor lineProcessor(hConsole);
@@ -1255,95 +1170,155 @@ void APIModelCaller::startInputOutputLoop() {
             {"content", user_input}
         });
 
-        // Send request and stream response
         doOneRequest();
     }
 }
 
 /**
- * @brief Process incoming response chunks from the API in streaming mode. 
- *        It detects the "data: [DONE]" sentinel indicating end of response.
+ * @brief 处理来自远程 API 的流式响应或 JSON 对象。
  */
 void APIModelCaller::processResponse(const std::string& chunk) {
-    static std::string currentResponse;
+    // 记录最后一次接收的时间，用于 TimerThread
+    {
+        std::lock_guard<std::mutex> lock(lastChunkMutex);
+        lastChunkTime = std::chrono::steady_clock::now();
+    }
+
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     MarkdownLineProcessor& lineProcessor = *gLineProcessor;
 
-    std::istringstream stream(chunk);
-    std::string line;
-    while (std::getline(stream, line)) {
-        if (line == "data: [DONE]") {
-            // End of data
-            if (!currentResponse.empty()) {
-                messages.push_back({
-                    {"role", "assistant"},
-                    {"content", currentResponse}
-                });
-                currentResponse.clear();
-            }
-            lineProcessor.processChar('\n');
-            std::cout << "\n\n";
-            SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
-            isNewResponse = true;
-            return;
-        }
+    // 如果是 localhost API，则逐行解析 JSON 对象
+    if (isLocalHostApi) {
+        static std::string buffer;
+        buffer += chunk;
 
-        if (line.find("data: ") == 0) {
-            // Each line is prefixed with "data: " according to OpenAI streaming protocol
-            std::string jsonData = line.substr(6);
-            try {
-                json response = json::parse(jsonData);
-                if (response["choices"][0].contains("delta") && 
-                    response["choices"][0]["delta"].contains("content")) 
-                {
-                    std::string messageContent = response["choices"][0]["delta"]["content"];
-                    currentResponse += messageContent;
+        size_t pos = 0;
+        while (true) {
+            size_t newlinePos = buffer.find('\n', pos);
+            if (newlinePos == std::string::npos) break;
+            std::string line = buffer.substr(pos, newlinePos - pos);
+            pos = newlinePos + 1;
 
-                    {
-                        std::lock_guard<std::mutex> lock(lastChunkMutex);
-                        lastChunkTime = std::chrono::steady_clock::now();
-                    }
+            if (!line.empty()) {
+                try {
+                    json j = json::parse(line);
+                    // 如果 done=true，表示回复结束
+                    if (j.contains("done") && j["done"].is_boolean() && j["done"].get<bool>() == true) {
+                        // 将累积的回复放入 messages
+                        if (!localHostAccumulatedResponse.empty()) {
+                            messages.push_back({
+                                {"role", "assistant"},
+                                {"content", localHostAccumulatedResponse}
+                            });
+                            localHostAccumulatedResponse.clear();
+                        }
+                        std::cout << "\n\n";
+                        isNewResponse = true;
+                    } else {
+                        // 正在流式输出
+                        if (j.contains("message") && j["message"].contains("content")) {
+                            std::string partial = j["message"]["content"].get<std::string>();
+                            localHostAccumulatedResponse += partial;
 
-                    if (!modelLoaded && !messageContent.empty()) {
-                        modelLoaded = true;
-                    }
-
-                    if (isNewResponse) {
-                        std::cout << "\n";
-                        isNewResponse = false;
-                    }
-
-                    size_t pos = 0;
-                    while (pos < messageContent.size()) {
-                        char ch = messageContent[pos];
-                        if (codeBlockElement.isActive()) {
-                            codeBlockElement.process(ch, pos, messageContent, 
-                                hConsole, *(new WORD(DEFAULT_COLOR)));
-                        } else {
-                            size_t oldPos = pos;
-                            if (codeBlockElement.process(ch, pos, messageContent, 
-                                hConsole, *(new WORD(DEFAULT_COLOR)))) 
-                            {
-                                continue;
-                            } else {
-                                lineProcessor.processChar(ch);
-                                pos++;
+                            // 按原先 Markdown/代码块的方式解析输出
+                            size_t p = 0;
+                            while (p < partial.size()) {
+                                char c = partial[p];
+                                if (codeBlockElement.isActive()) {
+                                    codeBlockElement.process(c, p, partial, hConsole, *(new WORD(DEFAULT_COLOR)));
+                                } else {
+                                    size_t oldPos = p;
+                                    if (codeBlockElement.process(c, p, partial, hConsole, *(new WORD(DEFAULT_COLOR)))) {
+                                        // 如果进入/退出 code block，直接 continue
+                                    } else {
+                                        lineProcessor.processChar(c);
+                                        p++;
+                                    }
+                                }
                             }
                         }
                     }
+                } catch (...) {
+                    // 忽略解析错误（有可能不是 JSON 或者不完整）
                 }
-            } 
-            catch (json::exception&) {
-                // Ignore JSON parsing errors here
+            }
+        }
+        buffer.erase(0, pos);
+    } 
+    else {
+        // 如果不是 localhost，则按原先类似 OpenAI 的 "data: " 方式解析
+        static std::string currentResponse;
+        std::istringstream stream(chunk);
+        std::string line;
+        while (std::getline(stream, line)) {
+            // 如果兼容 OpenAI 接口返回 "data: [DONE]"
+            if (line == "data: [DONE]") {
+                if (!currentResponse.empty()) {
+                    messages.push_back({
+                        {"role", "assistant"},
+                        {"content", currentResponse}
+                    });
+                    currentResponse.clear();
+                }
+                lineProcessor.processChar('\n');
+                std::cout << "\n\n";
+                SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
+                isNewResponse = true;
+                return;
+            }
+
+            if (line.find("data: ") == 0) {
+                std::string jsonData = line.substr(6);
+                try {
+                    json response = json::parse(jsonData);
+                    if (response["choices"][0].contains("delta") && 
+                        response["choices"][0]["delta"].contains("content")) 
+                    {
+                        std::string messageContent = response["choices"][0]["delta"]["content"];
+                        currentResponse += messageContent;
+
+                        if (!modelLoaded && !messageContent.empty()) {
+                            modelLoaded = true;
+                        }
+
+                        if (isNewResponse) {
+                            std::cout << "\n";
+                            isNewResponse = false;
+                        }
+
+                        size_t pos = 0;
+                        while (pos < messageContent.size()) {
+                            char ch = messageContent[pos];
+                            if (codeBlockElement.isActive()) {
+                                codeBlockElement.process(ch, pos, messageContent, 
+                                    hConsole, *(new WORD(DEFAULT_COLOR)));
+                            } else {
+                                size_t oldPos = pos;
+                                if (codeBlockElement.process(ch, pos, messageContent, 
+                                    hConsole, *(new WORD(DEFAULT_COLOR)))) 
+                                {
+                                    // code block 切换
+                                } else {
+                                    lineProcessor.processChar(ch);
+                                    pos++;
+                                }
+                            }
+                        }
+                    }
+                } 
+                catch (json::exception&) {
+                    // 忽略 JSON 解析错误
+                }
             }
         }
     }
+
+    // 更新 modelLoaded
+    if (!modelLoaded) {
+        modelLoaded = true;
+    }
 }
 
-/**
- * @brief Execute any pending code blocks for the API scenario. 
- *        After execution, we send the results back to the model as a user message.
- */
 void APIModelCaller::executePendingCodeBlocks() {
     if (pendingCodeBlocks.empty()) {
         return;
@@ -1367,7 +1342,6 @@ void APIModelCaller::executePendingCodeBlocks() {
         if (success) {
             SetConsoleTextAttribute(hConsole, GREEN_COLOR);
             fullOutput += resultMessage;
-            // Print only the last line of success message
             std::string lastLine = GetLastNonEmptyLine(resultMessage);
             std::cout << lastLine << std::endl;
         } else {
@@ -1390,21 +1364,18 @@ void APIModelCaller::executePendingCodeBlocks() {
     }
 }
 
-// Create a global unique_ptr<ModelCaller> so we can switch between local/remote
+// Global unique_ptr<ModelCaller>
 std::unique_ptr<ModelCaller> modelCaller;
 
-/**
- * @brief Program entry point.
- */
 int main() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
 
-    // Set console to UTF-8 for proper I/O
+    // Set console to UTF-8
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
-    // Load config from file
+    // Load config
     std::ifstream configFile("config.json");
     if (!configFile.is_open()) {
         std::cout << "Unable to open config.json" << std::endl;
@@ -1425,19 +1396,16 @@ int main() {
         useAPI = true;
     }
 
-    // Decide whether to use local or API-based model calling
     if (useAPI) {
         modelCaller = std::make_unique<APIModelCaller>();
     } else {
         modelCaller = std::make_unique<LocalModelCaller>();
     }
 
-    // Initialize the chosen model caller
     if (!modelCaller->initialize(configJson)) {
         return 1;
     }
 
-    // Start the input/output loop
     modelCaller->startInputOutputLoop();
 
     SetConsoleTextAttribute(hConsole, DEFAULT_COLOR);
